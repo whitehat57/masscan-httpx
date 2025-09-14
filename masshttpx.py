@@ -1,21 +1,22 @@
 import argparse
+import re
 
 def parse_masscan_line(line):
     """
-    Parse satu baris dari output Masscan dan convert ke URL http/https.
+    Parse line format seperti:
+    Timestamp: 1757843832   Host: 23.61.80.242 ()   Ports: 443/open/tcp//https//
     """
-    if "Host:" in line and "Ports:" in line:
-        try:
-            parts = line.strip().split()
-            ip = parts[3]
-            port = parts[7].split('/')[0]
+    match = re.search(r'Host:\s+([\d.]+)\s+\(\)\s+Ports:\s+(\d+)/open/tcp', line)
+    if match:
+        ip = match.group(1)
+        port = match.group(2)
 
-            if port == "443":
-                return f"https://{ip}"
-            else:
-                return f"http://{ip}"
-        except IndexError:
-            return None
+        if port == "443":
+            return f"https://{ip}"
+        elif port == "80":
+            return f"http://{ip}"
+        else:
+            return f"http://{ip}:{port}"
     return None
 
 def convert_masscan_to_httpx(input_file, output_file):
@@ -31,7 +32,7 @@ def convert_masscan_to_httpx(input_file, output_file):
         for url in urls:
             outfile.write(url + "\n")
 
-    print(f"[+] Converted {len(urls)} hosts to {output_file}")
+    print(f"[+] Converted {len(urls)} targets to {output_file}")
 
 def main():
     parser = argparse.ArgumentParser(description="Convert Masscan output to httpx input list")
